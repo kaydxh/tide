@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package tide.api.types;
+
+option java_package = "com.kaydxh.tide.api.types";
+option java_multiple_files = true;
+
+// 通用错误结构
+message Error {
+  int32 code = 1;        // 错误码
+  string message = 2;    // 错误信息
+  string reason = 3;     // 错误原因
+}

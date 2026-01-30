@@ -1,0 +1,148 @@
+# Tide Date Service Configuration
+# Similar to sea's sea-date.yaml
+
+log:
+  formatter: glog
+  level: debug
+  filepath: ./log
+  max_age: 604800s  # 168h
+  max_count: 200
+  rotate_interval: 3600s
+  rotate_size: 104857600
+  report_caller: true
+  redirect: stdout
+
+web:
+  bind_address:
+    host: "0.0.0.0"
+    port: 10001
+  grpc:
+    enabled: false
+    timeout: 0s
+  http:
+    api_formatter: trivial_api_v20  # api_noop, tcloud_api_v30, trivial_api_v10, trivial_api_v20
+  debug:
+    enable_profiling: true
+    disable_print_inoutput_methods: [""]
+
+  # ========================================
+  # OpenTelemetry 统一监控配置
+  # ========================================
+  open_telemetry:
+    enabled: false
+
+    # ========================================
+    # Global MeterProvider - 所有指标统一上报
+    # ========================================
+    metric_collect_duration: 60s
+    otel_metric_exporter_type: metric_otlp  # 推送到智研
+    # otel_metric_exporter_type: metric_prometheus  # 本地 Prometheus 拉取
+    otel_metric_exporter:
+      stdout:
+        pretty_print: true
+      prometheus:
+        url: /metrics
+      otlp:
+        endpoint: "opentelemetry.access.monitor.tencent-cloud.net:4318"
+        token: ""
+        protocol: "http"
+        insecure: false
+        url_path: "/v1/metrics"
+        headers: {}
+        compression: true
+        temporality_delta: true
+
+    # ========================================
+    # Trace 配置
+    # ========================================
+    otel_trace_exporter_type: trace_otlp
+    otel_log_exporter_type: log_none
+    otel_trace_exporter:
+      stdout:
+        pretty_print: true
+      otlp:
+        endpoint: "trace.zhiyan.tencent-cloud.net:4318"
+        token: ""
+        protocol: "http"
+        insecure: false
+        url_path: "/v1/traces"
+        headers: {}
+
+    # ========================================
+    # 通用资源配置
+    # ========================================
+    resource:
+      service_name: "tide-date"
+      service_version: ""
+      attrs: {}
+      k8s:
+        enabled: true
+      apm:
+        token: ""
+      zhiyan:
+        global_app_mark: ""
+        env: "test"
+        instance_mark: ""
+        zhiyan_apm_token: ""
+        expand_key: "no"
+        metric_group: ""
+
+  # QPS限流配置
+  qps_limit:
+    # gRPC QPS限流配置
+    grpc:
+      default_qps: 0        # 默认QPS，0表示不限制
+      default_burst: 0      # 默认突发容量，0表示使用default_qps值
+      max_concurrency: 10   # 最大并发数限制，0表示不限制
+      method_qps: []        # 方法级配置示例：
+      # - method: "/tidedate.v1.TideDateService/Now"
+      #   qps: 100
+      #   burst: 150
+      #   max_concurrency: 50
+    # HTTP QPS限流配置
+    http:
+      default_qps: 0        # 默认QPS，0表示不限制
+      default_burst: 0      # 默认突发容量
+      max_concurrency: 10   # 最大并发数限制，0表示不限制
+      method_qps: []        # 路径级配置示例：
+      # - method: "/v1/now"
+      #   qps: 100
+      #   burst: 150
+      #   max_concurrency: 50
+
+resolver:
+  enabled: false
+  resolve_interval: 10s
+  resolver_type: resolver_type_dns
+  load_balance_mode: load_balance_mode_consist
+  domains: []
+
+database:
+  mysql:
+    enabled: false
+    address: "localhost:3306"
+    username: "root"
+    password: ""
+    db_name: "tide"
+    max_connections: 100
+    max_idle_connections: 10
+    dial_timeout: 5s
+    max_wait_duration: 20s
+    fail_after_duration: 60s
+    interpolate_params: true
+  redis:
+    enabled: false
+    addresses:
+      - "localhost:6380"
+    password: "password"
+    db: 0
+    max_connections: 100
+    max_idle_connections: 10
+    dial_timeout: 5s
+    max_wait_duration: 20s
+    fail_after_duration: 300s
+
+debug:
+  dump:
+    enabled: false
+    dump_dir: "./debug/dump"
