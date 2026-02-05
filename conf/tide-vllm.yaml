@@ -1,0 +1,100 @@
+# Tide VLLM Service Configuration
+# vLLM 模板示例服务配置 - 使用千问3模型
+
+log:
+  formatter: glog
+  level: debug
+  filepath: ./log
+  max_age: 604800s  # 168h
+  max_count: 200
+  rotate_interval: 3600s
+  rotate_size: 104857600
+  report_caller: true
+  redirect: both  # stdout: 仅控制台, file: 仅文件, both: 同时输出
+
+web:
+  bind_address:
+    host: "0.0.0.0"
+    port: 10002  # 使用不同的端口与 tide-date 区分
+  grpc:
+    enabled: false
+    timeout: 0s
+  http:
+    api_formatter: trivial_api_v20
+  debug:
+    enable_profiling: true
+    disable_print_inoutput_methods: [""]
+
+  # OpenTelemetry 配置（可选）
+  open_telemetry:
+    enabled: false
+
+
+  # QPS限流配置
+  qps_limit:
+    http:
+      default_qps: 10
+      default_burst: 15
+      max_concurrency: 10
+
+# vLLM 配置
+vllm:
+  enabled: true
+  
+  # 是否自动启动 vLLM server（设为 true 则在服务启动时自动启动 vLLM）
+  # 如果设为 false，则需要手动先启动 vLLM server
+  auto_start: false
+  
+  # vLLM 服务器地址（当 auto_start=true 时，vLLM 将在此地址启动）
+  host: "0.0.0.0"
+  port: 8001
+  
+  # API Key（如果需要）
+  api_key: ""
+  
+  # ========== 模型配置 ==========
+  # served model name（客户端请求时使用的模型名称）
+  model_name: "Qwen2.5-7B-Instruct"  #"Qwen2.5-7B-Instruct"
+  # 模型路径（本地路径或 HuggingFace model id）
+  # 示例：
+  #   - HuggingFace: "Qwen/Qwen2.5-7B-Instruct"
+  #   - 本地路径: "/models/Qwen2.5-7B-Instruct"
+  model_path: "Qwen/Qwen2.5-7B-Instruct"
+  
+  # ========== 生成参数 ==========
+  max_tokens: 2048
+  temperature: 0.7
+  top_p: 0.9
+  
+  # ========== 请求配置 ==========
+  timeout: 60  # 请求超时（秒）
+  
+  # ========== vLLM Server 启动参数（仅当 auto_start=true 时有效）==========
+  # GPU 显存使用率（0.0-1.0）
+  gpu_memory_utilization: 0.9
+  
+  # 张量并行大小（用于多 GPU 场景，单 GPU 设为 1）
+  tensor_parallel_size: 1
+  
+  # 最大并发序列数
+  max_num_seqs: 256
+  
+  # 最大批处理 token 数
+  max_num_batched_tokens: 8192
+  
+  # 模型最大上下文长度（可根据显存大小调整）
+  max_model_len: 4096
+  
+  # 数据类型：auto, float16, bfloat16, float32
+  # 建议：A100/H100 使用 bfloat16，其他 GPU 使用 float16 或 auto
+  dtype: "auto"
+  
+  # vLLM server 启动超时时间（秒）
+  # 首次加载模型可能需要较长时间（下载 + 加载）
+  startup_timeout: 600
+  
+  # 启用前缀缓存（提升重复前缀的性能）
+  enable_prefix_caching: true
+  
+  # 启用分块预填充（提升长上下文性能）
+  enable_chunked_prefill: true

@@ -149,8 +149,94 @@ async def create_web_server(web_config):
         version="1.0.0",
     )
 
+    # 安装限流中间件
+    _install_qps_limit_middleware(server, web_config)
+
     logger.info(f"WebServer created: http://{host}:{port}")
     return server
+
+
+def _install_qps_limit_middleware(server, web_config):
+    """安装 QPS 限流中间件。
+
+    Args:
+        server: GenericWebServer 实例
+        web_config: Web 配置
+    """
+    try:
+        from peek.net.webserver.middleware import (
+            QPSLimitConfig,
+            MethodQPSConfig,
+            QPSRateLimitMiddleware,
+        )
+    except ImportError:
+        logger.warning("peek.net.webserver.middleware not available, skipping QPS limit middleware")
+        return
+
+    # 获取 qps_limit 配置
+    qps_limit_config = getattr(web_config, 'qps_limit', {}) or {}
+    if isinstance(qps_limit_config, dict):
+        http_qps_config = qps_limit_config.get('http', {})
+    else:
+        http_qps_config = getattr(qps_limit_config, 'http', {}) or {}
+
+    if not http_qps_config:
+        logger.debug("No HTTP QPS limit config found, skipping QPS limit middleware")
+        return
+
+    # 解析配置
+    if isinstance(http_qps_config, dict):
+        default_qps = http_qps_config.get('default_qps', 0)
+        default_burst = http_qps_config.get('default_burst', 0)
+        max_concurrency = http_qps_config.get('max_concurrency', 0)
+        method_qps_list = http_qps_config.get('method_qps', [])
+    else:
+        default_qps = getattr(http_qps_config, 'default_qps', 0)
+        default_burst = getattr(http_qps_config, 'default_burst', 0)
+        max_concurrency = getattr(http_qps_config, 'max_concurrency', 0)
+        method_qps_list = getattr(http_qps_config, 'method_qps', [])
+
+    # 如果没有配置任何限流参数，跳过
+    if default_qps <= 0 and max_concurrency <= 0 and not method_qps_list:
+        logger.debug("QPS limit config has no effective limits, skipping middleware")
+        return
+
+    # 构建方法级配置
+    method_configs = []
+    for item in method_qps_list:
+        if isinstance(item, dict):
+            method_configs.append(MethodQPSConfig(
+                method=item.get('method', '*'),
+                path=item.get('path', '/'),
+                qps=item.get('qps', 0),
+                burst=item.get('burst', 0),
+                max_concurrency=item.get('max_concurrency', 0),
+            ))
+        else:
+            method_configs.append(MethodQPSConfig(
+                method=getattr(item, 'method', '*'),
+                path=getattr(item, 'path', '/'),
+                qps=getattr(item, 'qps', 0),
+                burst=getattr(item, 'burst', 0),
+                max_concurrency=getattr(item, 'max_concurrency', 0),
+            ))
+
+    # 创建限流配置
+    config = QPSLimitConfig(
+        default_qps=default_qps,
+        default_burst=default_burst if default_burst > 0 else max(1, int(default_qps)),
+        max_concurrency=max_concurrency,
+        method_qps=method_configs,
+    )
+
+    # 添加限流中间件到服务器
+    server.app.add_middleware(QPSRateLimitMiddleware, config=config)
+
+    logger.info(
+        f"QPS limit middleware installed: "
+        f"default_qps={default_qps}, default_burst={default_burst}, "
+        f"max_concurrency={max_concurrency}"
+    )
 
 
 async def _create_fallback_server(web_config):
