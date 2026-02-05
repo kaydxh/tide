@@ -86,7 +86,7 @@ def _convert_resource_config(resource_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     转换 Resource 配置
 
-    智研平台的 Resource 属性要求：
+    Resource 属性要求：
     - __zhiyan_app_mark__: 上报应用标记（必填）
     - __zhiyan_env__: 环境标识（必填）
     - __zhiyan_expand_tag_enable__: 是否扩展属性到维度
@@ -118,7 +118,7 @@ def _convert_resource_config(resource_config: Dict[str, Any]) -> Dict[str, Any]:
             "expand_key": zhiyan.get("expand_key", "no"),
             "data_grain": zhiyan.get("data_grain", 0),
             "data_type": zhiyan.get("data_type", ""),
-            "apm_token": apm_token,  # 智研 Trace 上报需要
+            "apm_token": apm_token,  # Trace 上报需要
         },
         "attributes": resource_config.get("attrs", {}),
     }
