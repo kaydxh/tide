@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 import yaml
 
 from tide.config import ConfigLoader
+from tide.plugins.monitor import MonitorConfig
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ class ServerRunOptions:
     web_config: Optional[WebConfig] = None
     log_config: Optional[LogConfig] = None
     database_config: Optional[DatabaseConfig] = None
+    monitor_config: Optional[MonitorConfig] = None
 
     def __post_init__(self):
         """Load configuration from file."""
@@ -85,11 +87,15 @@ class ServerRunOptions:
             self.database_config = self._parse_database_config(
                 self.config.get("database", {})
             )
+            self.monitor_config = self._parse_monitor_config(
+                self.config.get("monitor", {})
+            )
         else:
             logger.warning(f"Config file not found: {config_path}")
             self.web_config = WebConfig()
             self.log_config = LogConfig()
             self.database_config = DatabaseConfig()
+            self.monitor_config = MonitorConfig()
 
     def _parse_web_config(self, data: Dict[str, Any]) -> WebConfig:
         """Parse web configuration."""
@@ -122,6 +128,10 @@ class ServerRunOptions:
             mysql=data.get("mysql", {}),
             redis=data.get("redis", {}),
         )
+
+    def _parse_monitor_config(self, data: Dict[str, Any]) -> MonitorConfig:
+        """Parse monitor configuration."""
+        return MonitorConfig.from_dict(data)
 
     def complete(self) -> "CompletedServerRunOptions":
         """Complete set default ServerRunOptions.
@@ -169,6 +179,9 @@ class CompletedServerRunOptions:
 
         # Install web handlers
         self._install_web_handler(web_server)
+
+        # 安装监控插件
+        await self._install_monitor(web_server)
 
         # Run the server
         # GenericWebServer.run() 是同步方法，使用 run_async() 进行异步运行
@@ -225,3 +238,9 @@ class CompletedServerRunOptions:
         from .plugin_web_handler import install_web_handler
 
         install_web_handler(web_server)
+
+    async def _install_monitor(self, web_server):
+        """安装监控插件。"""
+        from tide.plugins.monitor import install_monitor
+
+        await install_monitor(self._options.monitor_config, web_server)

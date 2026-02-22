@@ -10,6 +10,7 @@
 - RedisPlugin: Redis 插件
 - OpenTelemetryPlugin: OpenTelemetry 插件
 - WebServerPlugin: Web 服务器插件
+- MonitorPlugin: 进程资源监控插件
 """
 
 from tide.plugins.log import LogPlugin
@@ -17,6 +18,7 @@ from tide.plugins.mysql import MySQLPlugin
 from tide.plugins.redis import RedisPlugin
 from tide.plugins.opentelemetry import OpenTelemetryPlugin
 from tide.plugins.webserver import WebServerPlugin
+from tide.plugins.monitor import MonitorPlugin, MonitorConfig
 
 __all__ = [
     "LogPlugin",
@@ -24,4 +26,6 @@ __all__ = [
     "RedisPlugin",
     "OpenTelemetryPlugin",
     "WebServerPlugin",
+    "MonitorPlugin",
+    "MonitorConfig",
 ]
