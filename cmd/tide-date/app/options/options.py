@@ -131,7 +131,7 @@ class ServerRunOptions:
 
     def _parse_monitor_config(self, data: Dict[str, Any]) -> MonitorConfig:
         """Parse monitor configuration."""
-        return MonitorConfig.from_dict(data)
+        return MonitorConfig.model_validate(data)
 
     def complete(self) -> "CompletedServerRunOptions":
         """Complete set default ServerRunOptions.

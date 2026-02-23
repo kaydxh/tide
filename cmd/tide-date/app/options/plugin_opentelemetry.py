@@ -259,10 +259,6 @@ async def install_opentelemetry(
                 logger.debug("FastAPI instrumentation not available")
             except Exception as e:
                 logger.warning(f"Failed to instrument FastAPI: {e}")
-            except ImportError:
-                logger.debug("FastAPI instrumentation not available")
-            except Exception as e:
-                logger.warning(f"Failed to instrument FastAPI: {e}")
 
         logger.info(
             "OpenTelemetry installed successfully via peek: "
