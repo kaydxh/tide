@@ -5,12 +5,12 @@ log:
   formatter: glog
   level: info
   filepath: ./log
-  max_age: 604800s  # 168h
+  max_age: 168h  # 168h
   max_count: 200
   rotate_interval: 3600s
-  rotate_size: 104857600
+  rotate_size: 104857600 # 100MB
   report_caller: true
-  redirect: stdout
+  redirect: both  # stdout: 仅控制台, file: 仅文件, both: 同时输出
 
 web:
   bind_address:
@@ -19,15 +19,13 @@ web:
   grpc:
     enabled: true
     port: 10002
-    timeout: 0s
-  http:
-    api_formatter: trivial_api_v20  # api_noop, tcloud_api_v30, trivial_api_v10, trivial_api_v20
+  http: {}
 
   # ========================================
   # OpenTelemetry 统一监控配置
   # ========================================
   open_telemetry:
-    enabled: true
+    enabled: false
 
     # ========================================
     # Global MeterProvider - 所有指标统一上报
@@ -101,7 +99,7 @@ web:
 
 database:
   mysql:
-    enabled: true
+    enabled: false
     address: "<your-mysql-host>:3306"
     username: "<your-mysql-username>"
     password: "<your-mysql-password>"
@@ -113,7 +111,7 @@ database:
     fail_after_duration: 60s
     interpolate_params: true
   redis:
-    enabled: true
+    enabled: false
     addresses:
       - "<your-redis-host>:6379"
     password: "<your-redis-password>"

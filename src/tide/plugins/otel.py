@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Plugin: OpenTelemetry - Similar to sea's plugin.opentelemetry.go
+公共 OpenTelemetry 安装模块（函数式接口）
 
-使用 peek 库的 OpenTelemetryService 来实现，与 Go 版本的 sea 保持一致。
+将各服务重复的 plugin_opentelemetry.py 抽取到此处复用。
 """
 
 import logging
@@ -205,24 +205,22 @@ async def install_opentelemetry(
     config: Dict[str, Any], web_server: Optional[Any] = None
 ):
     """
-    Install OpenTelemetry using peek library.
-
-    Similar to sea's installOpenTelemetryOrDie.
+    安装 OpenTelemetry（使用 peek 库）。
 
     Args:
-        config: OpenTelemetry configuration dict matching tide-date.yaml format
-        web_server: Optional web server instance for instrumentation
+        config: OpenTelemetry 配置字典
+        web_server: 可选的 Web 服务器实例，用于 instrument FastAPI
     """
     if not config or not config.get("enabled", False):
-        logger.debug("OpenTelemetry is disabled, skipping installation")
+        logger.debug("OpenTelemetry 未启用，跳过安装")
         return
 
     try:
         from peek.opentelemetry import OpenTelemetryService
     except ImportError:
         logger.warning(
-            "peek.opentelemetry not installed, skipping OpenTelemetry installation. "
-            "Install with: pip install peek"
+            "peek.opentelemetry 未安装，跳过 OpenTelemetry 安装。"
+            "请运行: pip install peek"
         )
         return
 
@@ -230,13 +228,14 @@ async def install_opentelemetry(
         # 将 tide 配置格式转换为 peek 格式
         peek_config = _convert_config_to_peek_format(config)
 
-        logger.debug(f"Converted peek config: {peek_config}")
+        logger.debug(f"转换后的 peek 配置: {peek_config}")
 
         # 使用 peek 的 OpenTelemetryService
         service = OpenTelemetryService.from_config_dict(peek_config)
         service.install()
 
         # 保存 service 实例以便后续访问
+        global _opentelemetry_service
         _opentelemetry_service = service
 
         # ========================================
@@ -254,20 +253,20 @@ async def install_opentelemetry(
                     exclude_spans=["receive", "send"],  # 禁用 http send/receive 子 span
                 )
 
-                logger.info("FastAPI instrumented with OpenTelemetry (send/receive spans disabled)")
+                logger.info("FastAPI 已集成 OpenTelemetry（send/receive span 已禁用）")
             except ImportError:
-                logger.debug("FastAPI instrumentation not available")
+                logger.debug("FastAPI instrumentation 不可用")
             except Exception as e:
-                logger.warning(f"Failed to instrument FastAPI: {e}")
+                logger.warning(f"FastAPI instrumentation 失败: {e}")
 
         logger.info(
-            "OpenTelemetry installed successfully via peek: "
+            "OpenTelemetry 安装成功（via peek）: "
             f"tracer={peek_config.get('tracer', {}).get('exporter_type', 'none')}, "
             f"metric={peek_config.get('metric', {}).get('exporter_type', 'none')}"
         )
 
     except Exception as e:
-        logger.error(f"Failed to install OpenTelemetry: {e}")
+        logger.error(f"安装 OpenTelemetry 失败: {e}")
         raise
 
 

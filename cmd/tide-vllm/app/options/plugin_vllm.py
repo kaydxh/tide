@@ -120,7 +120,27 @@ class VLLMServerManager:
         if self.config.dtype and self.config.dtype != "auto":
             cmd += ["--dtype", self.config.dtype]
         
-        # 添加性能优化参数
+        # 多模态处理器参数（视频帧采样等）
+        if self.config.mm_processor_kwargs:
+            import json
+            try:
+                mm_kwargs_str = json.dumps(self.config.mm_processor_kwargs, separators=(",", ":"))
+                cmd += ["--mm-processor-kwargs", mm_kwargs_str]
+            except (TypeError, ValueError) as e:
+                logger.error(f"无效的 mm_processor_kwargs: {self.config.mm_processor_kwargs}, 错误: {e}")
+        
+        # 媒体IO参数（视频帧数控制等）
+        if self.config.media_io_kwargs:
+            import json
+            try:
+                media_io_str = json.dumps(self.config.media_io_kwargs, separators=(",", ":"))
+                cmd += ["--media-io-kwargs", media_io_str]
+            except (TypeError, ValueError) as e:
+                logger.error(f"无效的 media_io_kwargs: {self.config.media_io_kwargs}, 错误: {e}")
+        else:
+            # 默认：使用所有视频帧（-1 表示不限制帧数）
+            cmd += ["--media-io-kwargs", '{"video":{"num_frames":-1}}']
+        
         if self.config.enable_prefix_caching:
             cmd.append("--enable-prefix-caching")
         
@@ -330,6 +350,7 @@ async def install_vllm(config: Optional[VLLMConfig]):
         # 注册到全局 provider
         provider = global_provider()
         provider.vllm_client = client
+        provider.vllm_config = config
         if _vllm_server_manager:
             provider.vllm_server_manager = _vllm_server_manager
 

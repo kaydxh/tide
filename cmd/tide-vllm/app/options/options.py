@@ -3,46 +3,22 @@
 """
 Copyright 2024 The kaydxh Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
-...
 
 Server Run Options - vLLM 服务配置选项
 """
 
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, Optional
 
-import yaml
+from tide.plugins.base_options import (
+    BaseCompletedOptions,
+    BaseServerRunOptions,
+    LogConfig,
+    WebConfig,
+)
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class WebConfig:
-    """Web 服务器配置。"""
-
-    bind_address: Dict[str, Any] = field(default_factory=lambda: {"port": 10002})
-    grpc: Dict[str, Any] = field(default_factory=dict)
-    http: Dict[str, Any] = field(default_factory=dict)
-    debug: Dict[str, Any] = field(default_factory=dict)
-    open_telemetry: Dict[str, Any] = field(default_factory=dict)
-    qps_limit: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
-class LogConfig:
-    """日志配置。"""
-
-    formatter: str = "glog"
-    level: str = "debug"
-    filepath: str = "./log"
-    max_age: str = "604800s"
-    max_count: int = 200
-    rotate_interval: str = "3600s"
-    rotate_size: int = 104857600
-    report_caller: bool = True
-    redirect: str = "stdout"
 
 
 @dataclass
@@ -80,66 +56,48 @@ class VLLMConfig:
     startup_timeout: int = 600               # vLLM server 启动超时时间（秒）
     enable_prefix_caching: bool = True       # 启用前缀缓存
     enable_chunked_prefill: bool = True      # 启用分块预填充
+    
+    # 多模态处理参数
+    mm_processor_kwargs: Optional[Dict[str, Any]] = None  # 多模态处理器参数（如视频帧采样配置）
+    media_io_kwargs: Optional[Dict[str, Any]] = None      # 媒体IO参数（如视频帧数控制）
+
+    # 视频场景审核特有配置
+    logprobs: bool = True                    # 是否返回 logprobs
+    top_logprobs: int = 10                   # 返回 top-k 个 logprobs
+    seed: int = 42                           # 随机种子
+    scene_cls_threshold: float = 0.1         # 场景分类阈值
+    max_concurrent_requests: int = 4         # 最大并发请求数
+
+    # 视频解码配置
+    video_decode: Optional[Dict[str, Any]] = None  # 视频解码配置
 
 
-@dataclass
-class ServerRunOptions:
-    """服务器运行选项。"""
+class ServerRunOptions(BaseServerRunOptions):
+    """vLLM 服务器运行选项。"""
 
-    config_file: str
-    config: Dict[str, Any] = field(default_factory=dict)
-    web_config: Optional[WebConfig] = None
-    log_config: Optional[LogConfig] = None
-    vllm_config: Optional[VLLMConfig] = None
+    default_port = 10002
 
-    def __post_init__(self):
-        """从文件加载配置。"""
-        self._load_config()
+    def __init__(self, config_file: str):
+        self.vllm_config: Optional[VLLMConfig] = None
+        super().__init__(config_file)
 
-    def _load_config(self):
-        """从 YAML 文件加载配置。"""
-        config_path = Path(self.config_file)
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                self.config = yaml.safe_load(f) or {}
+    def _load_business_config(self):
+        """加载 vLLM 业务配置。"""
+        self.vllm_config = self._parse_vllm_config(self.config.get("vllm", {}))
 
-            # 解析子配置
-            self.web_config = self._parse_web_config(self.config.get("web", {}))
-            self.log_config = self._parse_log_config(self.config.get("log", {}))
-            self.vllm_config = self._parse_vllm_config(self.config.get("vllm", {}))
-        else:
-            logger.warning(f"配置文件未找到: {config_path}")
-            self.web_config = WebConfig()
-            self.log_config = LogConfig()
-            self.vllm_config = VLLMConfig()
-
-    def _parse_web_config(self, data: Dict[str, Any]) -> WebConfig:
-        """解析 Web 配置。"""
-        return WebConfig(
-            bind_address=data.get("bind_address", {"port": 10002}),
-            grpc=data.get("grpc", {}),
-            http=data.get("http", {}),
-            debug=data.get("debug", {}),
-            open_telemetry=data.get("open_telemetry", {}),
-            qps_limit=data.get("qps_limit", {}),
-        )
-
-    def _parse_log_config(self, data: Dict[str, Any]) -> LogConfig:
-        """解析日志配置。"""
-        return LogConfig(
-            formatter=data.get("formatter", "glog"),
-            level=data.get("level", "debug"),
-            filepath=data.get("filepath", "./log"),
-            max_age=data.get("max_age", "604800s"),
-            max_count=data.get("max_count", 200),
-            rotate_interval=data.get("rotate_interval", "3600s"),
-            rotate_size=data.get("rotate_size", 104857600),
-            report_caller=data.get("report_caller", True),
-            redirect=data.get("redirect", "stdout"),
-        )
+    def _init_default_business_config(self):
+        """初始化 vLLM 默认配置。"""
+        self.vllm_config = VLLMConfig()
 
     def _parse_vllm_config(self, data: Dict[str, Any]) -> VLLMConfig:
         """解析 vLLM 配置。"""
+        logger.info(
+            f"解析 vLLM 配置: model_name={data.get('model_name', '未设置')}, "
+            f"model_path={data.get('model_path', '未设置')}, "
+            f"host={data.get('host', '未设置')}, "
+            f"port={data.get('port', '未设置')}, "
+            f"auto_start={data.get('auto_start', '未设置')}"
+        )
         return VLLMConfig(
             enabled=data.get("enabled", False),
             host=data.get("host", "localhost"),
@@ -162,6 +120,17 @@ class ServerRunOptions:
             startup_timeout=data.get("startup_timeout", 600),
             enable_prefix_caching=data.get("enable_prefix_caching", True),
             enable_chunked_prefill=data.get("enable_chunked_prefill", True),
+            # 多模态处理参数
+            mm_processor_kwargs=data.get("mm_processor_kwargs", None),
+            media_io_kwargs=data.get("media_io_kwargs", None),
+            # 视频场景审核特有配置
+            logprobs=data.get("logprobs", True),
+            top_logprobs=data.get("top_logprobs", 10),
+            seed=data.get("seed", 42),
+            scene_cls_threshold=data.get("scene_cls_threshold", 0.1),
+            max_concurrent_requests=data.get("max_concurrent_requests", 4),
+            # 视频解码配置
+            video_decode=data.get("video_decode", None),
         )
 
     def complete(self) -> "CompletedServerRunOptions":
@@ -169,64 +138,20 @@ class ServerRunOptions:
         return CompletedServerRunOptions(self)
 
 
-class CompletedServerRunOptions:
-    """已完成的服务器运行选项。
+class CompletedServerRunOptions(BaseCompletedOptions):
+    """vLLM 服务已完成的服务器运行选项。"""
 
-    一个包装器，强制在调用 run 之前调用 complete()。
-    """
-
-    def __init__(self, options: ServerRunOptions):
-        self._options = options
-
-    @property
-    def options(self) -> ServerRunOptions:
-        """获取底层选项。"""
-        return self._options
-
-    async def run(self):
-        """运行服务器。"""
-        from tide import __version__
-
-        logger.info(f"正在启动 tide-vllm 版本 {__version__}")
-
-        # 按顺序安装插件
-        self._install_logs()
-        self._install_config()
-
-        # 创建 Web 服务器
-        web_server = await self._create_web_server()
-
-        # 安装 vLLM 客户端
-        await self._install_vllm()
-
-        # 安装 Web 处理器
-        self._install_web_handler(web_server)
-
-        # 运行服务器
-        if hasattr(web_server, 'run_async'):
-            await web_server.run_async()
-        else:
-            await web_server.run()
-
-    def _install_logs(self):
-        """安装日志配置。"""
-        from .plugin_logs import install_logs
-
-        install_logs(self._options.log_config)
+    _service_name = "tide-vllm"
 
     def _install_config(self):
         """将配置安装到 provider。"""
-        from .plugin_config import install_config
+        from pkg.tide_vllm.provider import global_provider
 
-        install_config(self._options.config)
+        provider = global_provider()
+        provider.config = self._options.config
+        logger.info(f"配置已安装: {list(self._options.config.keys())}")
 
-    async def _create_web_server(self):
-        """创建并配置 Web 服务器。"""
-        from tide.plugins.webserver import create_web_server
-
-        return await create_web_server(self._options.web_config)
-
-    async def _install_vllm(self):
+    async def _install_business(self, web_server):
         """安装 vLLM 客户端。"""
         from .plugin_vllm import install_vllm
 

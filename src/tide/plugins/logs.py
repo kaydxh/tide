@@ -1,37 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Plugin: Logs - 日志插件
+公共日志安装模块（函数式接口）
 
-使用 peek 的日志库实现日志功能，支持：
-- 多种日志格式（glog、text、json）
-- 日志文件轮转（按大小、按时间间隔）
-- 自动清理过期日志文件
+将各服务重复的 plugin_logs.py 抽取到此处复用。
 """
 
 import logging
 from typing import Optional
 
-from .options import LogConfig
-
 logger = logging.getLogger(__name__)
 
 
-def install_logs(config: Optional[LogConfig]):
+def install_logs(config):
     """安装日志配置。
-    
+
     使用 peek.logs 库来初始化日志系统。
-    
+
     Args:
-        config: 日志配置，如果为 None 则使用默认配置
+        config: 日志配置（LogConfig 实例），如果为 None 则使用默认配置
     """
     if config is None:
+        from tide.plugins.base_options import LogConfig
         config = LogConfig()
-    
+
     try:
         # 使用 peek 的日志库
         from peek.logs import LogConfig as PeekLogConfig, install_logs as peek_install_logs
-        
+
         # 转换为 peek 的日志配置
         peek_config = PeekLogConfig(
             formatter=config.formatter,
@@ -44,26 +40,26 @@ def install_logs(config: Optional[LogConfig]):
             rotate_interval=config.rotate_interval,
             report_caller=config.report_caller,
         )
-        
+
         # 安装日志
         peek_install_logs(peek_config)
-        
+
     except ImportError:
         # 如果 peek 库不可用，使用内置的简单实现
         logger.warning("peek.logs 库不可用，使用内置日志实现")
         _install_logs_fallback(config)
 
 
-def _install_logs_fallback(config: LogConfig):
+def _install_logs_fallback(config):
     """内置日志实现（当 peek 不可用时使用）
-    
+
     Args:
         config: 日志配置
     """
     import sys
     from logging.handlers import RotatingFileHandler
     from pathlib import Path
-    
+
     # 设置日志级别
     level_map = {
         "debug": logging.DEBUG,
@@ -93,22 +89,21 @@ def _install_logs_fallback(config: LogConfig):
     # 清除现有处理器
     root_logger.handlers.clear()
 
-    redirect = config.redirect.lower()
-    
+    redirect = config.redirect.lower() if config.redirect else "stdout"
+
     # 添加控制台处理器
     if redirect in ("stdout", "", "both"):
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(level)
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
-    
+
     # 添加文件处理器
     if redirect in ("file", "both"):
         log_path = Path(config.filepath)
         log_path.mkdir(parents=True, exist_ok=True)
-        
+
         # 生成日志文件名
-        import os
         prog_name = Path(sys.argv[0]).stem if sys.argv else "app"
         log_file = log_path / f"{prog_name}.log"
 

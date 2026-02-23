@@ -20,6 +20,17 @@ from tide.plugins.opentelemetry import OpenTelemetryPlugin
 from tide.plugins.webserver import WebServerPlugin
 from tide.plugins.monitor import MonitorPlugin
 from peek.config.schema import MonitorConfig
+from tide.plugins.base_options import (
+    WebConfig,
+    LogConfig,
+    BaseServerRunOptions,
+    BaseCompletedOptions,
+    parse_web_config,
+    parse_log_config,
+    parse_monitor_config,
+)
+from tide.plugins.logs import install_logs
+from tide.plugins.otel import install_opentelemetry, get_opentelemetry_service
 
 __all__ = [
     "LogPlugin",
@@ -29,4 +40,14 @@ __all__ = [
     "WebServerPlugin",
     "MonitorPlugin",
     "MonitorConfig",
+    "WebConfig",
+    "LogConfig",
+    "BaseServerRunOptions",
+    "BaseCompletedOptions",
+    "parse_web_config",
+    "parse_log_config",
+    "parse_monitor_config",
+    "install_logs",
+    "install_opentelemetry",
+    "get_opentelemetry_service",
 ]
