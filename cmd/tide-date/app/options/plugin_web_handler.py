@@ -29,7 +29,7 @@ def install_web_handler(web_server):
     try:
         # Import DDD layers
         from pkg.tide_date.domain.date import DateFactory, FactoryConfig
-        from pkg.tide_date.infrastructure.local import LocalDateRepository
+        from pkg.tide_date.infrastructure import LocalDateRepository
         from pkg.tide_date.application import Application, Commands, TideDateHandler
         from web.modules.tidedate.controller import DateController
 
