@@ -4,7 +4,8 @@
 """
 MySQL 插件
 
-参考 Go 版本 sea 的 plugin.mysql.go 实现
+基于 peek.database.mysql 的 Tide 专用插件封装。
+参考 Go 版本 sea 的 plugin.mysql.go 实现。
 """
 
 import logging
@@ -22,7 +23,8 @@ class MySQLPlugin(Plugin):
     """
     MySQL 插件
 
-    初始化 MySQL 连接池
+    封装 peek.database.mysql 的工厂函数，
+    负责生命周期管理和 Provider 注册。
     """
 
     name = "mysql"
@@ -38,31 +40,20 @@ class MySQLPlugin(Plugin):
         return ctx.config.database.mysql.enabled
 
     async def install(self, ctx: "CommandContext") -> None:
-        """安装 MySQL 插件"""
-        try:
-            from sqlalchemy.ext.asyncio import create_async_engine
-        except ImportError:
-            logger.warning("SQLAlchemy not installed, skipping MySQL plugin")
-            return
+        """安装 MySQL 插件，调用 peek.database.mysql 工厂函数"""
+        from peek.database.mysql import create_mysql_engine
 
         config = ctx.config.database.mysql
+        self._engine = await create_mysql_engine(config)
 
-        # 创建异步引擎
-        self._engine = create_async_engine(
-            config.dsn,
-            pool_size=config.max_idle_conns,
-            max_overflow=config.max_open_conns - config.max_idle_conns,
-            pool_recycle=int(config.conn_max_lifetime),
-            echo=False,
-        )
-
-        # 注册到 Provider
-        ctx.provider.set_mysql(self._engine)
-        logger.info(f"MySQL plugin installed: {config.host}:{config.port}/{config.database}")
+        if self._engine is not None:
+            # 注册到 Provider
+            ctx.provider.set_mysql(self._engine)
 
     async def uninstall(self, ctx: "CommandContext") -> None:
         """卸载 MySQL 插件"""
+        from peek.database.mysql import close_mysql_engine
+
         if self._engine:
-            await self._engine.dispose()
+            await close_mysql_engine(self._engine)
             self._engine = None
-            logger.info("MySQL plugin uninstalled")

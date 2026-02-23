@@ -4,7 +4,8 @@
 """
 Redis 插件
 
-参考 Go 版本 sea 的 plugin.redis.go 实现
+基于 peek.database.redis 的 Tide 专用插件封装。
+参考 Go 版本 sea 的 plugin.redis.go 实现。
 """
 
 import logging
@@ -22,7 +23,8 @@ class RedisPlugin(Plugin):
     """
     Redis 插件
 
-    初始化 Redis 连接
+    封装 peek.database.redis 的工厂函数，
+    负责生命周期管理和 Provider 注册。
     """
 
     name = "redis"
@@ -38,53 +40,20 @@ class RedisPlugin(Plugin):
         return ctx.config.database.redis.enabled
 
     async def install(self, ctx: "CommandContext") -> None:
-        """安装 Redis 插件"""
-        try:
-            import redis.asyncio as aioredis
-        except ImportError:
-            logger.warning("Redis not installed, skipping Redis plugin")
-            return
+        """安装 Redis 插件，调用 peek.database.redis 工厂函数"""
+        from peek.database.redis import create_redis_client
 
         config = ctx.config.database.redis
+        self._client = await create_redis_client(config)
 
-        # 解析地址
-        if config.addresses:
-            address = config.addresses[0]
-            if ":" in address:
-                host, port = address.rsplit(":", 1)
-                port = int(port)
-            else:
-                host = address
-                port = 6379
-        else:
-            host = "localhost"
-            port = 6379
-
-        # 创建 Redis 客户端
-        self._client = aioredis.Redis(
-            host=host,
-            port=port,
-            password=config.password or None,
-            db=config.database,
-            max_connections=config.pool_size,
-            socket_timeout=config.read_timeout,
-            socket_connect_timeout=config.dial_timeout,
-        )
-
-        # 测试连接
-        try:
-            await self._client.ping()
-        except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
-            raise
-
-        # 注册到 Provider
-        ctx.provider.set_redis(self._client)
-        logger.info(f"Redis plugin installed: {host}:{port}")
+        if self._client is not None:
+            # 注册到 Provider
+            ctx.provider.set_redis(self._client)
 
     async def uninstall(self, ctx: "CommandContext") -> None:
         """卸载 Redis 插件"""
+        from peek.database.redis import close_redis_client
+
         if self._client:
-            await self._client.close()
+            await close_redis_client(self._client)
             self._client = None
-            logger.info("Redis plugin uninstalled")
