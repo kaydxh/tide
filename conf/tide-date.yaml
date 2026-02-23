@@ -3,7 +3,7 @@
 
 log:
   formatter: glog
-  level: debug
+  level: info
   filepath: ./log
   max_age: 604800s  # 168h
   max_count: 200
@@ -17,34 +17,31 @@ web:
     host: "0.0.0.0"
     port: 10001
   grpc:
-    enabled: false
+    enabled: true
+    port: 10002
     timeout: 0s
   http:
     api_formatter: trivial_api_v20  # api_noop, tcloud_api_v30, trivial_api_v10, trivial_api_v20
-  debug:
-    enable_profiling: true
-    disable_print_inoutput_methods: [""]
 
   # ========================================
   # OpenTelemetry 统一监控配置
   # ========================================
   open_telemetry:
-    enabled: false
+    enabled: true
 
     # ========================================
     # Global MeterProvider - 所有指标统一上报
     # ========================================
     metric_collect_duration: 60s
-    otel_metric_exporter_type: metric_otlp  # 推送到智研
-    # otel_metric_exporter_type: metric_prometheus  # 本地 Prometheus 拉取
+    otel_metric_exporter_type: metric_otlp
     otel_metric_exporter:
       stdout:
         pretty_print: true
       prometheus:
         url: /metrics
       otlp:
-        endpoint: "opentelemetry.access.monitor.tencent-cloud.net:4318"
-        token: ""
+        endpoint: "<your-metric-endpoint>"
+        token: "<your-metric-token>"
         protocol: "http"
         insecure: false
         url_path: "/v1/metrics"
@@ -61,8 +58,8 @@ web:
       stdout:
         pretty_print: true
       otlp:
-        endpoint: "trace.zhiyan.tencent-cloud.net:4318"
-        token: ""
+        endpoint: "<your-trace-endpoint>"
+        token: "<your-trace-token>"
         protocol: "http"
         insecure: false
         url_path: "/v1/traces"
@@ -78,14 +75,14 @@ web:
       k8s:
         enabled: true
       apm:
-        token: ""
+        token: "<your-apm-token>"
       zhiyan:
-        global_app_mark: ""
+        global_app_mark: "<your-global-app-mark>"
         env: "test"
         instance_mark: ""
-        zhiyan_apm_token: ""
+        zhiyan_apm_token: "<your-zhiyan-apm-token>"
         expand_key: "no"
-        metric_group: ""
+        metric_group: "<your-metric-group>"
 
   # QPS限流配置
   qps_limit:
@@ -94,36 +91,21 @@ web:
       default_qps: 0        # 默认QPS，0表示不限制
       default_burst: 0      # 默认突发容量，0表示使用default_qps值
       max_concurrency: 10   # 最大并发数限制，0表示不限制
-      method_qps: []        # 方法级配置示例：
-      # - method: "/tidedate.v1.TideDateService/Now"
-      #   qps: 100
-      #   burst: 150
-      #   max_concurrency: 50
+      method_qps: []
     # HTTP QPS限流配置
     http:
       default_qps: 0        # 默认QPS，0表示不限制
       default_burst: 0      # 默认突发容量
       max_concurrency: 10   # 最大并发数限制，0表示不限制
-      method_qps: []        # 路径级配置示例：
-      # - method: "/v1/now"
-      #   qps: 100
-      #   burst: 150
-      #   max_concurrency: 50
-
-resolver:
-  enabled: false
-  resolve_interval: 10s
-  resolver_type: resolver_type_dns
-  load_balance_mode: load_balance_mode_consist
-  domains: []
+      method_qps: []
 
 database:
   mysql:
-    enabled: false
-    address: "localhost:3306"
-    username: "root"
-    password: ""
-    db_name: "tide"
+    enabled: true
+    address: "<your-mysql-host>:3306"
+    username: "<your-mysql-username>"
+    password: "<your-mysql-password>"
+    db_name: "<your-db-name>"
     max_connections: 100
     max_idle_connections: 10
     dial_timeout: 5s
@@ -131,10 +113,10 @@ database:
     fail_after_duration: 60s
     interpolate_params: true
   redis:
-    enabled: false
+    enabled: true
     addresses:
-      - "localhost:6380"
-    password: "password"
+      - "<your-redis-host>:6379"
+    password: "<your-redis-password>"
     db: 0
     max_connections: 100
     max_idle_connections: 10
@@ -142,7 +124,22 @@ database:
     max_wait_duration: 20s
     fail_after_duration: 300s
 
-debug:
-  dump:
-    enabled: false
-    dump_dir: "./debug/dump"
+# 进程资源监控配置
+monitor:
+  # 是否启用监控插件（启用后提供 /debug/monitor/* API 端点）
+  enabled: true
+
+  # 是否在启动时自动开始持续采集（false 则只提供按需快照 API）
+  auto_start: true
+
+  # 采集间隔（秒），仅持续采集模式有效
+  interval: 5
+
+  # 是否启用 GPU 监控（需要 pynvml）
+  enable_gpu: false
+
+  # 是否监控子进程
+  include_children: true
+
+  # 历史记录最大条数（按采集间隔计算，3600 条 × 5 秒 = 5 小时）
+  history_size: 3600
