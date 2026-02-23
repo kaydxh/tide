@@ -40,8 +40,6 @@ dependencies = [
     # 开发调试时使用本地 peek: pip install -e /path/to/peek
     # 发布时切换为: "peek>=0.1.0",
     # "peek>=0.1.0",
-    # CLI
-    "click>=8.1.0",
     "rich>=13.0.0",
     # 配置
     "pydantic>=2.0.0",
@@ -93,9 +91,6 @@ Homepage = "https://github.com/kaydxh/tide"
 Documentation = "https://github.com/kaydxh/tide#readme"
 Repository = "https://github.com/kaydxh/tide.git"
 Issues = "https://github.com/kaydxh/tide/issues"
-
-[project.scripts]
-tide = "tide.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

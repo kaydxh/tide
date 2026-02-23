@@ -1,54 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Plugin: MySQL - Similar to sea's plugin.mysql.go
+Plugin: MySQL - tide-date 的 MySQL 安装入口
 
-调用 peek.database.mysql 的工厂函数创建连接，注册到 Provider。
+通用逻辑已下沉到 peek.plugins.mysql，
+本模块仅提供 register_callback 回调完成 provider 注册。
 """
 
 import logging
 from typing import Any, Dict
 
+from peek.plugins.mysql import install_mysql as _install_mysql
+
 logger = logging.getLogger(__name__)
 
 
-async def install_mysql(config: Dict[str, Any], web_server=None):
-    """Install MySQL connection.
+async def _register_mysql_engine(engine):
+    """将 MySQL engine 注册到 tide-date provider。"""
+    from pkg.tide_date.provider import global_provider
 
-    Similar to sea's installMysqlOrDie.
-    调用 peek.database.mysql.create_mysql_engine 创建连接。
+    provider = global_provider()
+    provider.mysql = engine
+
+
+async def install_mysql(config: Dict[str, Any], web_server=None):
+    """安装 MySQL 连接。
 
     Args:
         config: MySQL 配置字典
-        web_server: GenericWebServer 实例，用于注册 shutdown hook 以优雅关闭连接池
+        web_server: GenericWebServer 实例
     """
-    if not config or not config.get("enabled", False):
-        logger.debug("MySQL is disabled, skipping installation")
-        return
-
-    try:
-        from peek.database.mysql import create_mysql_engine, close_mysql_engine
-
-        engine = await create_mysql_engine(config)
-
-        if engine is not None:
-            # 注册到 provider
-            from pkg.tide_date.provider import global_provider
-
-            provider = global_provider()
-            provider.mysql = engine
-
-            # 注册 shutdown hook，在服务退出前主动关闭连接池
-            # 避免事件循环关闭后 aiomysql Connection.__del__ 报 RuntimeError
-            if web_server is not None:
-                web_server.add_pre_shutdown_hook(
-                    "mysql-close",
-                    lambda: close_mysql_engine(engine),
-                )
-                logger.info("Registered MySQL shutdown hook")
-
-    except ImportError:
-        logger.warning("MySQL dependencies not installed, skipping")
-    except Exception as e:
-        logger.error(f"Failed to install MySQL: {e}")
-        raise
+    await _install_mysql(config, web_server, register_callback=_register_mysql_engine)

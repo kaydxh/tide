@@ -3,7 +3,8 @@
 
 from .options import ServerRunOptions, CompletedServerRunOptions, VLLMConfig
 from .plugin_vllm import VLLMServerManager, get_vllm_server_manager
-from tide.plugins.monitor import MonitorConfig, get_monitor_service
+from peek.config.schema import MonitorConfig
+from peek.plugins.monitor import get_monitor_service
 
 __all__ = [
     "ServerRunOptions",

@@ -1,26 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Application - 应用层定义
+"""Application - 从 peek 重导出
 
-定义应用层的命令和处理器
+核心实现已下沉到 peek.ai.vllm.chat.handler。
 """
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from peek.ai.vllm.chat.handler import Application, Commands
 
-if TYPE_CHECKING:
-    from .chat_handler import ChatHandler
-
-
-@dataclass
-class Commands:
-    """命令集合"""
-    chat_handler: "ChatHandler"
-
-
-@dataclass
-class Application:
-    """应用层
-    
-    包含所有命令处理器
-    """
-    commands: Commands
+__all__ = ["Application", "Commands"]

@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from tide.plugins.base_options import (
+from peek.plugins.base_options import (
     BaseCompletedOptions,
     BaseServerRunOptions,
     LogConfig,
