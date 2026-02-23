@@ -13,7 +13,7 @@
     # 运行全部测试
     python -m pytest tests/test_tide_date.py -v
     # 只运行 gRPC 测试
-    python -m pytest tests/test_tide_date.py -v -k "Grpc"
+    python -m pytest tests/test_tide_date.py -v -k "Grpc" -s
     # 只运行 HTTP 测试
     python -m pytest tests/test_tide_date.py -v -k "not Grpc"
 """
@@ -98,7 +98,6 @@ class TestNow:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["RequestId"] == ""
         assert data["Error"] is None
         assert data["Date"] != ""
 

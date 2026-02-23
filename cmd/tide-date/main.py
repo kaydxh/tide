@@ -28,17 +28,6 @@ from app.server import new_command
 
 def main():
     """Main entry point."""
-    # Setup signal handling
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    # Handle shutdown signals
-    for sig in (signal.SIGTERM, signal.SIGINT):
-        loop.add_signal_handler(
-            sig,
-            lambda s=sig: asyncio.create_task(shutdown(s, loop))
-        )
-
     try:
         command = new_command()
         command()
@@ -47,16 +36,6 @@ def main():
     except Exception as e:
         print(f"failed to run server, err: {e}", file=sys.stderr)
         sys.exit(1)
-
-
-async def shutdown(sig, loop):
-    """Cleanup tasks tied to the service's shutdown."""
-    print(f"Received exit signal {sig.name}...")
-    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-    for task in tasks:
-        task.cancel()
-    await asyncio.gather(*tasks, return_exceptions=True)
-    loop.stop()
 
 
 if __name__ == "__main__":

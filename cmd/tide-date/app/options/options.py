@@ -173,8 +173,8 @@ class CompletedServerRunOptions:
         web_server = await self._create_web_server()
 
         # Install optional components based on config
-        await self._install_mysql()
-        await self._install_redis()
+        await self._install_mysql(web_server)
+        await self._install_redis(web_server)
         await self._install_opentelemetry(web_server)
 
         # Install web handlers
@@ -209,17 +209,17 @@ class CompletedServerRunOptions:
 
         return await create_web_server(self._options.web_config)
 
-    async def _install_mysql(self):
+    async def _install_mysql(self, web_server):
         """Install MySQL if enabled."""
         from .plugin_mysql import install_mysql
 
-        await install_mysql(self._options.database_config.mysql)
+        await install_mysql(self._options.database_config.mysql, web_server)
 
-    async def _install_redis(self):
+    async def _install_redis(self, web_server):
         """Install Redis if enabled."""
         from .plugin_redis import install_redis
 
-        await install_redis(self._options.database_config.redis)
+        await install_redis(self._options.database_config.redis, web_server)
 
     async def _install_opentelemetry(self, web_server):
         """Install OpenTelemetry if enabled."""
