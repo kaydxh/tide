@@ -10,59 +10,21 @@ Monitor 插件 - 进程资源监控
 3. 支持按需快照和持续采集
 4. 支持 HTML/JSON 报告生成
 
-该插件可被 tide 下所有 cmd 应用复用。
+MonitorConfig 已下沉到 peek.config.schema。
 """
 
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from tide.app.plugin import Plugin
+
+# MonitorConfig 从 peek 导入
+from peek.config.schema import MonitorConfig
 
 if TYPE_CHECKING:
     from tide.app.command import CommandContext
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class MonitorConfig:
-    """进程监控配置。
-
-    Attributes:
-        enabled: 是否启用监控插件。
-        auto_start: 是否在启动时自动开始持续采集（false 则只提供按需快照 API）。
-        interval: 采集间隔（秒），仅持续采集模式有效。
-        enable_gpu: 是否启用 GPU 监控（需要 pynvml）。
-        include_children: 是否监控子进程（如 vLLM server）。
-        history_size: 历史记录最大条数。
-    """
-
-    enabled: bool = False
-    auto_start: bool = False
-    interval: float = 5.0
-    enable_gpu: bool = True
-    include_children: bool = True
-    history_size: int = 3600
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MonitorConfig":
-        """从字典创建配置。
-
-        Args:
-            data: 配置字典（通常来自 YAML 解析）
-
-        Returns:
-            MonitorConfig 实例
-        """
-        return cls(
-            enabled=data.get("enabled", False),
-            auto_start=data.get("auto_start", False),
-            interval=data.get("interval", 5.0),
-            enable_gpu=data.get("enable_gpu", True),
-            include_children=data.get("include_children", True),
-            history_size=data.get("history_size", 3600),
-        )
 
 
 # 全局 MonitorService 实例
@@ -89,7 +51,7 @@ class MonitorPlugin(Plugin):
     """
 
     name = "monitor"
-    priority = 5  # 低优先级，在其他插件之后安装（确保子进程已启动）
+    priority = 5  # 低优先级，在其他插件之后安装
 
     def __init__(self):
         self._service = None
@@ -107,11 +69,18 @@ class MonitorPlugin(Plugin):
 
     async def install(self, ctx: "CommandContext") -> None:
         """安装监控插件。"""
-        global _monitor_service
-
         monitor_config = getattr(ctx.config, "monitor", {})
         if isinstance(monitor_config, dict):
-            config = MonitorConfig.from_dict(monitor_config)
+            config = MonitorConfig.model_validate(monitor_config)
+        elif not isinstance(monitor_config, MonitorConfig):
+            config = MonitorConfig.model_validate(dict(
+                enabled=getattr(monitor_config, 'enabled', False),
+                auto_start=getattr(monitor_config, 'auto_start', False),
+                interval=getattr(monitor_config, 'interval', 5.0),
+                enable_gpu=getattr(monitor_config, 'enable_gpu', True),
+                include_children=getattr(monitor_config, 'include_children', True),
+                history_size=getattr(monitor_config, 'history_size', 3600),
+            ))
         else:
             config = monitor_config
 
@@ -134,21 +103,12 @@ async def install_monitor(
 ) -> Optional[Any]:
     """安装监控插件（函数式接口）。
 
-    提供无需 PluginManager 的简便安装方式，适合在各 cmd 应用的
-    CompletedServerRunOptions.run() 中直接调用。
-
     Args:
         config: 监控配置，为 None 或 enabled=False 时跳过安装
-        web_server: Web 服务器实例（用于注册 API 路由），
-                    需要有 app 属性（FastAPI 实例）
+        web_server: Web 服务器实例（用于注册 API 路由）
 
     Returns:
         MonitorService 实例，如果未启用则返回 None
-
-    Example:
-        >>> from tide.plugins.monitor import install_monitor, MonitorConfig
-        >>> config = MonitorConfig(enabled=True, interval=5.0)
-        >>> service = await install_monitor(config, web_server)
     """
     global _monitor_service
 
@@ -178,7 +138,7 @@ async def install_monitor(
             )
             return None
 
-        # 将 tide MonitorConfig 转换为 peek MonitorServiceConfig
+        # 将 peek MonitorConfig 转换为 peek MonitorServiceConfig
         service_config = MonitorServiceConfig(
             enabled=config.enabled,
             auto_start=config.auto_start,
@@ -194,7 +154,6 @@ async def install_monitor(
 
         # 注册 API 路由
         if web_server is not None:
-            # 获取 FastAPI app
             app = getattr(web_server, "app", None)
             if app is None:
                 router = getattr(web_server, "router", None)

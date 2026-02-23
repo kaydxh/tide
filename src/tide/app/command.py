@@ -4,11 +4,15 @@
 """
 Command - 命令和上下文
 
-参考 Go 版本 sea 的 cobra.Command 实现
+基于 peek.app.command 的 Tide 专用命令上下文，
+添加 TideApp/TideConfig/Provider 的类型约束。
 """
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
+
+# 从 peek 基础库重导出
+from peek.app.command import Command
 
 if TYPE_CHECKING:
     from tide.app.application import TideApp
@@ -17,34 +21,17 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class Command:
-    """
-    命令定义
-
-    Attributes:
-        name: 命令名称
-        func: 命令函数
-        description: 命令描述
-        aliases: 命令别名
-    """
-
-    name: str
-    func: Callable
-    description: str = ""
-    aliases: list = field(default_factory=list)
-
-
-@dataclass
 class CommandContext:
     """
-    命令执行上下文
+    Tide 命令执行上下文
 
-    提供命令执行所需的所有依赖
+    继承 peek.app.command.CommandContext 的概念，
+    添加 Tide 特定的类型约束。
 
     Attributes:
-        app: 应用实例
-        config: 配置
-        provider: 依赖提供者
+        app: TideApp 应用实例
+        config: TideConfig 配置
+        provider: Tide Provider
         extra: 额外数据
     """
 
@@ -60,3 +47,9 @@ class CommandContext:
     def set(self, key: str, value: Any) -> None:
         """设置额外数据"""
         self.extra[key] = value
+
+
+__all__ = [
+    "Command",
+    "CommandContext",
+]

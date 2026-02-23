@@ -2,18 +2,20 @@
 # -*- coding: utf-8 -*-
 
 """
-配置加载器
+Tide 配置加载器
 
-参考 Go 版本 sea 的 viper 配置加载实现
+基于 peek.config.ConfigLoader 的 Tide 专用配置加载器，
+提供 Tide 框架的默认配置（TideConfig、TIDE 环境变量前缀等）。
 """
 
 import logging
-import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Type, TypeVar, Union
 
-import yaml
 from pydantic import BaseModel
+
+# 复用 peek 基础库的 ConfigLoader
+from peek.config.loader import ConfigLoader as BaseConfigLoader
 
 from tide.config.config import TideConfig
 
@@ -22,179 +24,35 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T", bound=BaseModel)
 
 
-class ConfigLoader:
+class ConfigLoader(BaseConfigLoader):
     """
-    配置加载器
+    Tide 配置加载器
 
-    支持：
-    - YAML 文件加载
-    - 环境变量覆盖
-    - 多文件合并
+    继承 peek.config.ConfigLoader，设置 Tide 默认的环境变量前缀为 "TIDE"。
     """
 
-    def __init__(self):
-        self._data: Dict[str, Any] = {}
-        self._env_prefix: str = "TIDE"
-
-    def load_file(self, path: Union[str, Path]) -> "ConfigLoader":
-        """
-        加载配置文件
-
-        Args:
-            path: 配置文件路径
-
-        Returns:
-            self
-        """
-        path = Path(path)
-        if not path.exists():
-            raise FileNotFoundError(f"Config file not found: {path}")
-
-        with open(path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-
-        self._merge_data(self._data, data)
-        logger.info(f"Loaded config from {path}")
-        return self
-
-    def load_env(self, prefix: Optional[str] = None) -> "ConfigLoader":
-        """
-        从环境变量加载配置
-
-        环境变量命名规则：
-        - TIDE_WEB_BIND_ADDRESS_PORT=8080
-        - TIDE_LOG_LEVEL=debug
-
-        Args:
-            prefix: 环境变量前缀
-
-        Returns:
-            self
-        """
-        prefix = prefix or self._env_prefix
-        prefix = prefix.upper() + "_"
-
-        for key, value in os.environ.items():
-            if not key.startswith(prefix):
-                continue
-
-            # 移除前缀并转换为配置路径
-            config_key = key[len(prefix) :].lower()
-            keys = config_key.split("_")
-
-            # 尝试解析值
-            parsed_value = self._parse_env_value(value)
-
-            # 设置到配置中
-            self._set_nested(self._data, keys, parsed_value)
-            logger.debug(f"Loaded env config: {key}={parsed_value}")
-
-        return self
-
-    def _parse_env_value(self, value: str) -> Any:
-        """解析环境变量值"""
-        # 布尔值
-        if value.lower() in ("true", "yes", "1", "on"):
-            return True
-        if value.lower() in ("false", "no", "0", "off"):
-            return False
-
-        # 整数
-        try:
-            return int(value)
-        except ValueError:
-            pass
-
-        # 浮点数
-        try:
-            return float(value)
-        except ValueError:
-            pass
-
-        # 列表（逗号分隔）
-        if "," in value:
-            return [v.strip() for v in value.split(",")]
-
-        return value
-
-    def _set_nested(self, data: Dict, keys: list, value: Any) -> None:
-        """设置嵌套字典值"""
-        for key in keys[:-1]:
-            data = data.setdefault(key, {})
-        data[keys[-1]] = value
-
-    def _merge_data(self, base: Dict, override: Dict) -> None:
-        """合并配置数据"""
-        for key, value in override.items():
-            if (
-                key in base
-                and isinstance(base[key], dict)
-                and isinstance(value, dict)
-            ):
-                self._merge_data(base[key], value)
-            else:
-                base[key] = value
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """
-        获取配置值
-
-        Args:
-            key: 配置键（支持点分隔，如 "web.bind_address.port"）
-            default: 默认值
-
-        Returns:
-            配置值
-        """
-        keys = key.split(".")
-        value = self._data
-
-        for k in keys:
-            if isinstance(value, dict):
-                value = value.get(k)
-            else:
-                return default
-
-            if value is None:
-                return default
-
-        return value
-
-    def to_model(self, model_class: Type[T] = TideConfig) -> T:
-        """
-        转换为 Pydantic 模型
-
-        Args:
-            model_class: 模型类
-
-        Returns:
-            模型实例
-        """
-        return model_class.model_validate(self._data)
-
-    @property
-    def data(self) -> Dict[str, Any]:
-        """获取原始数据"""
-        return self._data.copy()
+    def __init__(self, env_prefix: str = "TIDE"):
+        super().__init__(env_prefix=env_prefix)
 
 
 def load_config_from_file(
     path: Union[str, Path],
     model_class: Type[T] = TideConfig,
     load_env: bool = True,
+    env_prefix: str = "TIDE",
 ) -> T:
     """
     从文件加载配置
 
     Args:
         path: 配置文件路径
-        model_class: 模型类
+        model_class: 模型类，默认为 TideConfig
         load_env: 是否加载环境变量
 
     Returns:
         配置模型
     """
-    loader = ConfigLoader()
+    loader = ConfigLoader(env_prefix=env_prefix)
     loader.load_file(path)
 
     if load_env:
@@ -212,7 +70,7 @@ def load_config(
 
     Args:
         data: 配置字典
-        model_class: 模型类
+        model_class: 模型类，默认为 TideConfig
 
     Returns:
         配置模型

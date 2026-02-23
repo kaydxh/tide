@@ -13,12 +13,9 @@ Tide App 模块
 from tide.app.application import TideApp
 from tide.app.command import Command, CommandContext
 from tide.app.plugin import Plugin, PluginManager
-from tide.app.hooks import (
+from peek.app.hooks import (
     HookType,
-    HookEntry,
     HookManager,
-    PostStartHook,
-    PreShutdownHook,
 )
 
 __all__ = [
@@ -28,8 +25,5 @@ __all__ = [
     "Plugin",
     "PluginManager",
     "HookType",
-    "HookEntry",
     "HookManager",
-    "PostStartHook",
-    "PreShutdownHook",
 ]

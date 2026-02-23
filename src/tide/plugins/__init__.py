@@ -18,7 +18,8 @@ from tide.plugins.mysql import MySQLPlugin
 from tide.plugins.redis import RedisPlugin
 from tide.plugins.opentelemetry import OpenTelemetryPlugin
 from tide.plugins.webserver import WebServerPlugin
-from tide.plugins.monitor import MonitorPlugin, MonitorConfig
+from tide.plugins.monitor import MonitorPlugin
+from peek.config.schema import MonitorConfig
 
 __all__ = [
     "LogPlugin",

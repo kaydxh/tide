@@ -4,7 +4,7 @@
 """
 OpenTelemetry 插件
 
-参考 Go 版本 sea 的 plugin.opentelemetry.go 实现
+桥接到 peek.opentelemetry 模块，利用 peek 完善的 OpenTelemetry 系统。
 """
 
 import logging
@@ -22,15 +22,14 @@ class OpenTelemetryPlugin(Plugin):
     """
     OpenTelemetry 插件
 
-    初始化 Tracer 和 Meter
+    桥接 tide 的 OpenTelemetryConfig 到 peek.opentelemetry.OpenTelemetryService
     """
 
     name = "opentelemetry"
     priority = 90  # 高优先级，在日志之后
 
     def __init__(self):
-        self._tracer_provider = None
-        self._meter_provider = None
+        self._service = None
 
     def should_install(self, ctx: "CommandContext") -> bool:
         """检查是否应该安装"""
@@ -41,108 +40,72 @@ class OpenTelemetryPlugin(Plugin):
     async def install(self, ctx: "CommandContext") -> None:
         """安装 OpenTelemetry 插件"""
         try:
-            from opentelemetry import trace, metrics
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.metrics import MeterProvider
-            from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
+            from peek.opentelemetry import OpenTelemetryService, OpenTelemetryConfigBuilder
         except ImportError:
-            logger.warning("OpenTelemetry not installed, skipping plugin")
+            logger.warning("peek.opentelemetry not available, skipping plugin")
             return
 
         config = ctx.config.open_telemetry
 
-        # 创建资源
-        resource = Resource.create({
-            SERVICE_NAME: config.service_name,
-            SERVICE_VERSION: config.service_version,
-        })
+        # 使用 peek 的 ConfigBuilder 构建配置
+        builder = OpenTelemetryConfigBuilder().with_enabled(True)
+
+        # 配置 Resource
+        builder = builder.with_resource(
+            service_name=config.service_name,
+            service_version=config.service_version,
+        )
 
         # 配置 Tracer
         if config.trace_enabled:
-            self._tracer_provider = TracerProvider(resource=resource)
-
-            # 配置导出器
-            try:
-                if config.trace_exporter_type == "otlp":
-                    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-                    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-                    exporter = OTLPSpanExporter(endpoint=config.trace_endpoint)
-                    self._tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
-
-                elif config.trace_exporter_type == "stdout":
-                    from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
-
-                    self._tracer_provider.add_span_processor(
-                        SimpleSpanProcessor(ConsoleSpanExporter())
-                    )
-            except ImportError as e:
-                logger.warning(f"Trace exporter not available: {e}")
-
-            trace.set_tracer_provider(self._tracer_provider)
-            tracer = trace.get_tracer(config.service_name)
-            ctx.provider.set_tracer(tracer)
-            logger.info(f"Tracer initialized: {config.trace_exporter_type}")
+            if config.trace_exporter_type == "otlp":
+                builder = builder.with_tracer_otlp(
+                    endpoint=config.trace_endpoint,
+                    sample_ratio=config.trace_sample_ratio,
+                )
+            elif config.trace_exporter_type == "stdout":
+                builder = builder.with_tracer_stdout()
 
         # 配置 Meter
         if config.metric_enabled:
-            self._meter_provider = MeterProvider(resource=resource)
+            if config.metric_exporter_type == "otlp":
+                builder = builder.with_metric_otlp(
+                    endpoint=config.metric_endpoint,
+                    collect_interval=f"{int(config.metric_collect_duration)}s",
+                )
+            elif config.metric_exporter_type == "prometheus":
+                builder = builder.with_metric_prometheus()
+            elif config.metric_exporter_type == "stdout":
+                builder = builder.with_metric_stdout()
 
-            # 配置导出器
+        # 构建并安装
+        peek_config = builder.build()
+        self._service = OpenTelemetryService(peek_config)
+        self._service.install()
+
+        # 将 tracer/meter 注册到 tide provider
+        if self._service.tracer_provider and ctx.provider:
             try:
-                if config.metric_exporter_type == "otlp":
-                    from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-                    from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+                from opentelemetry import trace
+                tracer = trace.get_tracer(config.service_name)
+                ctx.provider.set_tracer(tracer)
+            except ImportError:
+                pass
 
-                    exporter = OTLPMetricExporter(endpoint=config.metric_endpoint)
-                    reader = PeriodicExportingMetricReader(
-                        exporter,
-                        export_interval_millis=int(config.metric_collect_duration * 1000),
-                    )
-                    self._meter_provider = MeterProvider(
-                        resource=resource,
-                        metric_readers=[reader],
-                    )
+        if self._service.meter_provider and ctx.provider:
+            try:
+                from opentelemetry import metrics
+                meter = metrics.get_meter(config.service_name)
+                ctx.provider.set_meter(meter)
+            except ImportError:
+                pass
 
-                elif config.metric_exporter_type == "prometheus":
-                    from opentelemetry.exporter.prometheus import PrometheusMetricReader
-
-                    reader = PrometheusMetricReader()
-                    self._meter_provider = MeterProvider(
-                        resource=resource,
-                        metric_readers=[reader],
-                    )
-
-                elif config.metric_exporter_type == "stdout":
-                    from opentelemetry.sdk.metrics.export import (
-                        ConsoleMetricExporter,
-                        PeriodicExportingMetricReader,
-                    )
-
-                    reader = PeriodicExportingMetricReader(
-                        ConsoleMetricExporter(),
-                        export_interval_millis=int(config.metric_collect_duration * 1000),
-                    )
-                    self._meter_provider = MeterProvider(
-                        resource=resource,
-                        metric_readers=[reader],
-                    )
-            except ImportError as e:
-                logger.warning(f"Metric exporter not available: {e}")
-
-            metrics.set_meter_provider(self._meter_provider)
-            meter = metrics.get_meter(config.service_name)
-            ctx.provider.set_meter(meter)
-            logger.info(f"Meter initialized: {config.metric_exporter_type}")
+        logger.info("OpenTelemetry plugin installed (via peek.opentelemetry)")
 
     async def uninstall(self, ctx: "CommandContext") -> None:
         """卸载 OpenTelemetry 插件"""
-        if self._tracer_provider:
-            self._tracer_provider.shutdown()
-            self._tracer_provider = None
-
-        if self._meter_provider:
-            self._meter_provider.shutdown()
-            self._meter_provider = None
+        if self._service:
+            self._service.shutdown()
+            self._service = None
 
         logger.info("OpenTelemetry plugin uninstalled")

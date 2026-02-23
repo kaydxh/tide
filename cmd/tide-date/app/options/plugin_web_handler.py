@@ -49,8 +49,16 @@ def install_web_handler(web_server):
         # 3. Create Controller with Application
         controller = DateController(app)
 
-        # 4. Register routes to WebServer
+        # 4. Register HTTP routes to WebServer
         controller.register_routes(web_server)
+
+        # 5. Register gRPC Servicer (如果 web_server 支持)
+        if hasattr(web_server, 'register_grpc_service'):
+            try:
+                from web.modules.tidedate.grpc_servicer import register_grpc_servicer
+                register_grpc_servicer(web_server, app)
+            except Exception as e:
+                logger.warning(f"Failed to register gRPC servicer: {e}")
 
         logger.info("Web handlers installed successfully")
 
