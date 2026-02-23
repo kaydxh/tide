@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Date Domain - Date entity, factory, and repository
+Date Domain - 日期领域模型
 
-Similar to sea's domain/date package.
+包含实体、工厂、仓储接口和错误定义。
 """
 
 from .entity import (

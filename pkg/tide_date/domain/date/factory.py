@@ -6,32 +6,23 @@ Licensed under the Apache License, Version 2.0 (the "License");
 ...
 
 Date Factory - Factory for creating TideDate entities
-
-Similar to sea's date.entity.factory.go
 """
 
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
-from ..kit.date import Repository as KitDateRepository
+from .repository import DateRepository
 from .entity import TideDate
 
 
 @dataclass
 class FactoryConfig:
-    """Factory configuration.
+    """工厂配置。"""
 
-    Similar to sea's FactoryConfig struct.
-    """
-
-    date_repository: Optional[KitDateRepository] = None
-    # validator: Optional[Any] = None  # Can add pydantic validator if needed
+    date_repository: Optional[DateRepository] = None
 
     def validate(self) -> None:
-        """Validate factory configuration.
-
-        Similar to sea's FactoryConfig.Validate method.
-        """
+        """校验工厂配置。"""
         if self.date_repository is None:
             raise ValueError("date_repository is required")
 
@@ -41,20 +32,14 @@ FactoryConfigFunc = Callable[[FactoryConfig], None]
 
 
 class DateFactory:
-    """Factory for creating TideDate entities.
-
-    Similar to sea's Factory struct.
-    """
+    """日期实体工厂。"""
 
     def __init__(
         self,
         config: FactoryConfig,
         config_funcs: Optional[List[FactoryConfigFunc]] = None
     ):
-        """Initialize factory.
-
-        Similar to sea's NewFactory function.
-        """
+        """初始化工厂。"""
         # Apply config functions
         if config_funcs:
             for func in config_funcs:
@@ -66,8 +51,5 @@ class DateFactory:
         self._config = config
 
     def new_tide_date(self) -> TideDate:
-        """Create a new TideDate entity.
-
-        Similar to sea's Factory.NewSeaDate method.
-        """
+        """创建 TideDate 实体。"""
         return TideDate(date_repository=self._config.date_repository)

@@ -62,6 +62,38 @@ class Provider(BaseProvider):
         """获取 Meter"""
         return self.get("meter")
 
+    def set_config(self, config: Any) -> None:
+        """设置全局配置"""
+        self.register("config", config, overwrite=True)
+
+    def get_config(self) -> Optional[Any]:
+        """获取全局配置"""
+        return self.get("config")
+
+    def set_vllm_client(self, client: Any) -> None:
+        """设置 vLLM 客户端"""
+        self.register("vllm_client", client, overwrite=True)
+
+    def get_vllm_client(self) -> Optional[Any]:
+        """获取 vLLM 客户端"""
+        return self.get("vllm_client")
+
+    def set_vllm_config(self, config: Any) -> None:
+        """设置 vLLM 配置"""
+        self.register("vllm_config", config, overwrite=True)
+
+    def get_vllm_config(self) -> Optional[Any]:
+        """获取 vLLM 配置"""
+        return self.get("vllm_config")
+
+    def set_vllm_server_manager(self, manager: Any) -> None:
+        """设置 vLLM Server Manager"""
+        self.register("vllm_server_manager", manager, overwrite=True)
+
+    def get_vllm_server_manager(self) -> Optional[Any]:
+        """获取 vLLM Server Manager"""
+        return self.get("vllm_server_manager")
+
 
 # 全局单例获取函数
 def get_provider() -> Provider:

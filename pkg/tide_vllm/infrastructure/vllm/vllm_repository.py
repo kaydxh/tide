@@ -6,21 +6,22 @@
 """
 
 from peek.ai.vllm.chat.vllm_repository import VLLMChatRepository as _BaseVLLMChatRepository
-from pkg.tide_vllm.provider import global_provider
+from tide.provider import get_provider as global_provider
 
 
 def _get_client():
     """从 tide-vllm provider 获取 vLLM 客户端"""
     provider = global_provider()
-    if provider.vllm_client is None:
+    client = provider.get_vllm_client()
+    if client is None:
         raise RuntimeError("vLLM 客户端未初始化，请检查配置")
-    return provider.vllm_client
+    return client
 
 
 def _get_server_manager():
     """从 tide-vllm provider 获取 vLLM server manager"""
     provider = global_provider()
-    return provider.vllm_server_manager
+    return provider.get_vllm_server_manager()
 
 
 class VLLMChatRepository(_BaseVLLMChatRepository):

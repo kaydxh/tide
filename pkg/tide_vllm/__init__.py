@@ -4,7 +4,7 @@
 from .application import Application, Commands, ChatHandler
 from .domain import chat
 from .infrastructure import vllm
-from .provider import Provider, global_provider
+from tide.provider import get_provider as global_provider, Provider
 
 __all__ = [
     "Application",

@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 async def _register_redis_client(client):
-    """将 Redis client 注册到 tide-date provider。"""
-    from pkg.tide_date.provider import global_provider
+    """将 Redis client 注册到 provider。"""
+    from tide.provider import get_provider
 
-    provider = global_provider()
-    provider.redis = client
+    provider = get_provider()
+    provider.set_redis(client)
 
 
 async def install_redis(config: Dict[str, Any], web_server=None):

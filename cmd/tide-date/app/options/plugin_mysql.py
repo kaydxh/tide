@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 async def _register_mysql_engine(engine):
-    """将 MySQL engine 注册到 tide-date provider。"""
-    from pkg.tide_date.provider import global_provider
+    """将 MySQL engine 注册到 provider。"""
+    from tide.provider import get_provider
 
-    provider = global_provider()
-    provider.mysql = engine
+    provider = get_provider()
+    provider.set_mysql(engine)
 
 
 async def install_mysql(config: Dict[str, Any], web_server=None):

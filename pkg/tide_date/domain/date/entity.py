@@ -6,17 +6,13 @@ Licensed under the Apache License, Version 2.0 (the "License");
 ...
 
 Date Entity - Domain entity for date operations
-
-Similar to sea's date.entity.go
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from ..kit.date import Repository as KitDateRepository
-from ..kit.date import NowRequest as KitNowRequest
-from ..kit.date import NowErrorRequest as KitNowErrorRequest
+from .repository import DateRepository, NowRequest as RepoNowRequest, NowErrorRequest as RepoNowErrorRequest
 from .error import ErrInternal
 
 # 从 peek gRPC 拦截器中获取 request_id 和 trace_id
@@ -74,37 +70,31 @@ class NowErrorResponse:
 class TideDate:
     """TideDate entity.
 
-    Similar to sea's SeaDate struct.
+    核心日期领域实体。
     """
 
-    def __init__(self, date_repository: KitDateRepository):
+    def __init__(self, date_repository: DateRepository):
         self.date_repository = date_repository
 
     async def now(self, req: NowRequest) -> NowResponse:
-        """Get current date/time.
-
-        Similar to sea's SeaDate.Now method.
-        """
+        """获取当前日期/时间。"""
         try:
-            kit_req = KitNowRequest()
-            kit_resp = await self.date_repository.now(kit_req)
+            repo_req = RepoNowRequest()
+            repo_resp = await self.date_repository.now(repo_req)
 
-            return NowResponse(date=kit_resp.date)
+            return NowResponse(date=repo_resp.date)
 
         except Exception as e:
             logger.error(f"{_log_prefix()}failed to call Now, err: {e}")
             raise ErrInternal(str(e)) from e
 
     async def now_error(self, req: NowErrorRequest) -> NowErrorResponse:
-        """Get current date/time with error.
-
-        Similar to sea's SeaDate.NowError method.
-        """
+        """获取当前日期/时间（带错误测试）。"""
         try:
-            kit_req = KitNowErrorRequest(request_id=req.request_id)
-            kit_resp = await self.date_repository.now_error(kit_req)
+            repo_req = RepoNowErrorRequest(request_id=req.request_id)
+            repo_resp = await self.date_repository.now_error(repo_req)
 
-            return NowErrorResponse(date=kit_resp.date)
+            return NowErrorResponse(date=repo_resp.date)
 
         except Exception as e:
             logger.error(f"{_log_prefix()}failed to call NowError, err: {e}")

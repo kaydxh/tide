@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 async def _register_client(config: VLLMConfig, server_manager: Optional[VLLMServerManager]) -> None:
     """创建 vLLM 客户端并注册到 tide-vllm 的 provider"""
-    from pkg.tide_vllm.provider import global_provider
+    from tide.provider import get_provider
     from peek.ai.vllm import VLLMClient
 
     client = VLLMClient(
@@ -37,11 +37,11 @@ async def _register_client(config: VLLMConfig, server_manager: Optional[VLLMServ
         timeout=config.timeout,
     )
 
-    provider = global_provider()
-    provider.vllm_client = client
-    provider.vllm_config = config
+    provider = get_provider()
+    provider.set_vllm_client(client)
+    provider.set_vllm_config(config)
     if server_manager:
-        provider.vllm_server_manager = server_manager
+        provider.set_vllm_server_manager(server_manager)
 
 
 async def install_vllm(config: Optional[VLLMConfig]):

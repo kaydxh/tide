@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Domain Layer - Business logic and domain models
+Domain Layer - 领域层
 
-Similar to sea's domain package.
+包含业务逻辑和领域模型。
 """
 
 from .date import DateFactory, FactoryConfig, TideDate, DateRepository

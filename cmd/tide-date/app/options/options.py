@@ -67,10 +67,10 @@ class CompletedServerRunOptions(BaseCompletedOptions):
 
     def _install_config(self):
         """将配置安装到 provider。"""
-        from pkg.tide_date.provider import global_provider
+        from tide.provider import get_provider
 
-        provider = global_provider()
-        provider.config = self._options.config
+        provider = get_provider()
+        provider.set_config(self._options.config)
         logger.info(f"配置已安装: {list(self._options.config.keys())}")
 
     async def _install_business(self, web_server):

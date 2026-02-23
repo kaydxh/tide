@@ -5,15 +5,13 @@ Copyright 2024 The kaydxh Authors.
 Licensed under the Apache License, Version 2.0 (the "License");
 ...
 
-Local Date Repository - Local implementation of date repository
-
-Similar to sea's local.date.repository.go
+Local Date Repository - 本地日期仓储实现
 """
 
 from datetime import datetime
 
-from ...domain.kit.date import (
-    Repository,
+from ...domain.date.repository import (
+    DateRepository,
     NowRequest,
     NowResponse,
     NowErrorRequest,
@@ -21,23 +19,16 @@ from ...domain.kit.date import (
 )
 
 
-class LocalDateRepository(Repository):
-    """Local implementation of date repository.
-
-    Similar to sea's Repository struct in infrastructure/local.
-    """
+class LocalDateRepository(DateRepository):
+    """本地日期仓储实现。"""
 
     async def now(self, req: NowRequest) -> NowResponse:
-        """Get current date/time.
-
-        Similar to sea's Repository.Now method.
-        """
+        """获取当前日期/时间。"""
         return NowResponse(date=str(datetime.now()))
 
     async def now_error(self, req: NowErrorRequest) -> NowErrorResponse:
-        """Get current date/time with error.
+        """获取当前日期/时间（带错误测试）。
 
-        Similar to sea's Repository.NowError method.
-        Always raises an error for testing purposes.
+        始终抛出异常用于测试。
         """
         raise Exception("Internal")
