@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Tide Date API v1 - Pydantic Models
+tide_date v1 - Pydantic Schemas
 
-对应 api.proto 中定义的消息结构
+由 scripts/gen_pydantic_models.py 从 api.proto 自动生成，请勿手动修改。
 """
 
 from typing import Optional
 
 from pydantic import BaseModel, Field
-
 
 class Error(BaseModel):
     """通用错误结构"""
@@ -17,43 +16,42 @@ class Error(BaseModel):
     message: str = Field(default="", description="错误信息")
     reason: str = Field(default="", description="错误原因")
 
-
 class NowRequest(BaseModel):
-    """Now 请求"""
+    """生成当前时间
+  rpc Now(NowRequest) returns (NowResponse) {};
+  rpc NowError(NowErrorRequest) returns (NowErrorResponse) {};
+}"""
 
     request_id: str = Field(default="", alias="RequestId", description="请求ID")
-    data: Optional[bytes] = Field(default=None, alias="Data", description="数据")
+    data: Optional[bytes] = Field(default=None, alias="Data")
 
     class Config:
         populate_by_name = True
-
 
 class NowResponse(BaseModel):
-    """Now 响应"""
+    """NowResponse"""
 
     request_id: str = Field(default="", alias="RequestId", description="请求ID")
     date: str = Field(default="", alias="Date", description="当前时间")
-    error: Optional[Error] = Field(default=None, alias="Error", description="错误信息")
+    error: Optional[Error] = Field(default=None, alias="Error")
 
     class Config:
         populate_by_name = True
-
 
 class NowErrorRequest(BaseModel):
-    """NowError 请求"""
+    """NowErrorRequest"""
 
     request_id: str = Field(default="", alias="RequestId", description="请求ID")
 
     class Config:
         populate_by_name = True
 
-
 class NowErrorResponse(BaseModel):
-    """NowError 响应"""
+    """NowErrorResponse"""
 
     request_id: str = Field(default="", alias="RequestId", description="请求ID")
     date: str = Field(default="", alias="Date", description="当前时间")
-    error: Optional[Error] = Field(default=None, alias="Error", description="错误信息")
+    error: Optional[Error] = Field(default=None, alias="Error")
 
     class Config:
         populate_by_name = True

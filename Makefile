@@ -109,6 +109,9 @@ proto: proto-check
 			$$proto; \
 	done
 	@echo "Proto compilation done"
+	@echo "Generating Pydantic models..."
+	@python scripts/gen_pydantic_models.py $(PROTO_DIR)
+	@echo "All done"
 
 # 编译单个服务的 proto（用法: make proto-service SERVICE=tide_date/v1）
 proto-service: proto-check
@@ -129,6 +132,14 @@ proto-service: proto-check
 				$$proto; \
 		fi \
 	done
+	@echo "Generating Pydantic models for $(SERVICE)..."
+	@python scripts/gen_pydantic_models.py $(PROTO_DIR) $(PROTO_DIR)/$(SERVICE)/api.proto
+	@echo "Done"
+
+# 单独生成 Pydantic models（不重新编译 proto）
+proto-models:
+	@echo "Generating Pydantic models..."
+	@python scripts/gen_pydantic_models.py $(PROTO_DIR)
 	@echo "Done"
 
 # 清理生成的 proto 文件
@@ -138,6 +149,7 @@ proto-clean:
 	@find $(PROTO_OUT) -name "*_pb2.pyi" -delete 2>/dev/null || true
 	@find $(PROTO_OUT) -name "*_pb2_grpc.py" -delete 2>/dev/null || true
 	@echo "Proto clean done"
+	@echo "Note: schemas.py 和 __init__.py 未清理（可通过 make proto 重新生成）"
 
 # 列出所有 proto 文件
 proto-list:
@@ -165,6 +177,7 @@ help:
 	@echo "Proto:"
 	@echo "  proto        - Compile all proto files"
 	@echo "  proto-service- Compile specific service (SERVICE=tide_date/v1)"
+	@echo "  proto-models - Generate Pydantic models only"
 	@echo "  proto-clean  - Clean generated proto files"
 	@echo "  proto-list   - List all proto files"
 	@echo "  proto-check  - Check proto tools installation"

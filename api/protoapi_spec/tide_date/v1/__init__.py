@@ -1,23 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-Tide Date API v1 Protocol Definitions
+tide_date v1 Protocol Definitions
 
-This module contains the generated Python classes from proto definitions.
-For Python, we also provide Pydantic models for HTTP/JSON APIs.
+由 scripts/gen_pydantic_models.py 自动生成，请勿手动修改。
 """
 
-from .models import (
+from .schemas import (
+    Error,
     NowRequest,
     NowResponse,
     NowErrorRequest,
     NowErrorResponse,
-    Error,
 )
 
 __all__ = [
+    "Error",
     "NowRequest",
     "NowResponse",
     "NowErrorRequest",
     "NowErrorResponse",
-    "Error",
 ]

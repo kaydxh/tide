@@ -25,13 +25,13 @@ web:
   # OpenTelemetry 统一监控配置
   # ========================================
   open_telemetry:
-    enabled: false
+    enabled: true
 
     # ========================================
     # Global MeterProvider - 所有指标统一上报
     # ========================================
     metric_collect_duration: 60s
-    otel_metric_exporter_type: metric_otlp
+    otel_metric_exporter_type: metric_stdout
     otel_metric_exporter:
       stdout:
         pretty_print: true
@@ -50,7 +50,7 @@ web:
     # ========================================
     # Trace 配置
     # ========================================
-    otel_trace_exporter_type: trace_otlp
+    otel_trace_exporter_type: trace_stdout # trace_otlp
     otel_log_exporter_type: log_none
     otel_trace_exporter:
       stdout:
